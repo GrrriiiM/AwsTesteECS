@@ -1,8 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Threading.Tasks;
 using Amazon.SimpleNotificationService;
+using Amazon.SQS;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.HttpsPolicy;
@@ -32,9 +34,21 @@ namespace TesteECS
             services.AddHostedService<Worker>();
             // services.Configure<AwsSnsSettings>("AWS::SNS", Configuration);
             services.AddOptions<AwsSnsSettings>("AWS::SNS");
-            services.AddScoped<ISnsService, SnsService>();
+
+            var assembly = this.GetType().Assembly;
+            foreach(var i in assembly.GetTypes().Where(_ => _.IsInterface && _.GetCustomAttributes<InjectableAttribute>().Any()))
+            {
+                var imp = assembly.GetTypes().FirstOrDefault(_ => _.IsClass && i.IsAssignableFrom(_));
+                if (imp != null) services.AddScoped(i, imp);
+            }
+            
             services.AddScoped<IAmazonSimpleNotificationService>(sp => new AmazonSimpleNotificationServiceClient(
                 new AmazonSimpleNotificationServiceConfig
+                {
+                    ServiceURL = "http://localhost:4566"
+                }));
+            services.AddScoped<IAmazonSQS>(sp => new AmazonSQSClient(
+                new AmazonSQSConfig
                 {
                     ServiceURL = "http://localhost:4566"
                 }));

@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Amazon.SimpleNotificationService;
 using Amazon.SimpleNotificationService.Model;
+using Amazon.SQS;
 using Microsoft.Extensions.Options;
 using TesteECS.Settings;
 
@@ -13,12 +14,15 @@ namespace TesteECS.Services
     {
         readonly AwsSnsSettings _settings;
         readonly IAmazonSimpleNotificationService _client;
+        readonly IAmazonSQS _sqsClient;
 
         public SnsService(IOptions<AwsSnsSettings> settings,
-            IAmazonSimpleNotificationService client)
+            IAmazonSimpleNotificationService client,
+            IAmazonSQS sqsClient)
         {
             _settings = settings.Value;
             _client = client;
+            _sqsClient = sqsClient;
         }
 
         public async Task<IEnumerable<string>> ListTopics(CancellationToken cancellationToken)
@@ -45,16 +49,27 @@ namespace TesteECS.Services
             }, cancellationToken)).TopicArn;
         }
 
-        public Task Emit(dynamic message)
+        public async Task SubscribeTopic(string topicArn, string queueArn, CancellationToken cancellationToken)
         {
-            return Task.CompletedTask;
+            await _client.SubscribeQueueToTopicsAsync(new[] { topicArn }, _sqsClient, queueArn);
+        }
+
+        public async Task<string> Publish(string topicArn, dynamic message, CancellationToken cancellationToken)
+        {
+            return (await _client.PublishAsync(new PublishRequest
+            {
+                TopicArn = topicArn,
+                Message = System.Text.Json.JsonSerializer.Serialize(message)
+            })).SequenceNumber;
         }
     }
 
+    [Injectable]
     public interface ISnsService
     {
         Task<string> CreateTopic(string name, CancellationToken cancellationToken);
         Task<IEnumerable<string>> ListTopics(CancellationToken cancellationToken);
-        Task Emit(dynamic message);
+        Task SubscribeTopic(string topicArn, string queueArn, CancellationToken cancellationToken);
+        Task<string> Publish(string topicArn, dynamic message, CancellationToken cancellationToken);
     }
 }
