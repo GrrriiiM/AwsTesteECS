@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Amazon.SimpleNotificationService;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.HttpsPolicy;
@@ -10,6 +11,8 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using TesteECS.Services;
+using TesteECS.Settings;
 
 namespace TesteECS
 {
@@ -27,6 +30,14 @@ namespace TesteECS
         {
             services.AddControllers();
             services.AddHostedService<Worker>();
+            // services.Configure<AwsSnsSettings>("AWS::SNS", Configuration);
+            services.AddOptions<AwsSnsSettings>("AWS::SNS");
+            services.AddScoped<ISnsService, SnsService>();
+            services.AddScoped<IAmazonSimpleNotificationService>(sp => new AmazonSimpleNotificationServiceClient(
+                new AmazonSimpleNotificationServiceConfig
+                {
+                    ServiceURL = "http://localhost:4566"
+                }));
             services.AddSwaggerGen();
         }
 
