@@ -31,7 +31,7 @@ namespace TesteECS
         public void ConfigureServices(IServiceCollection services)
         {
             services.AddControllers();
-            services.AddHostedService<Worker>();
+            // services.AddHostedService<Worker>();
             // services.Configure<AwsSnsSettings>("AWS::SNS", Configuration);
             services.AddOptions<AwsSnsSettings>("AWS::SNS");
 
@@ -53,6 +53,18 @@ namespace TesteECS
                     ServiceURL = "http://localhost:4566"
                 }));
             services.AddSwaggerGen();
+            var queueUrls = new List<string>();
+            using(var scope = services.BuildServiceProvider().CreateScope())
+            {
+                queueUrls = scope.ServiceProvider.GetService<ISqsService>().ListQueues(default).Result.ToList();
+            }
+            foreach(var queueUrl in queueUrls)
+            {
+                services.AddHostedService(sp => new SqsWorker(
+                    sp,
+                    queueUrl,
+                    sp.GetService<ILogger<SqsWorker>>()));
+            }
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.

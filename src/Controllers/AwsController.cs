@@ -25,10 +25,10 @@ namespace TesteECS.Controllers
         public async Task SubscribeTopic([FromRoute]string topicArn, [FromBody]SubscribeTopicRequest request, [FromServices] ISnsService service, CancellationToken cancellationToken)
             => await service.SubscribeTopic(topicArn, request.QueueUrl, cancellationToken);
 
-        public class PublishTopicRequest { public dynamic Message { get; set; } }
+        public class PublishTopicRequest { public object Message { get; set; } }
         [HttpPost("sns/topics/{topicArn}/messages")]
         public async Task PublishTopic([FromRoute]string topicArn, [FromBody]PublishTopicRequest request, [FromServices] ISnsService service, CancellationToken cancellationToken)
-            => await service.SubscribeTopic(topicArn, request.Message, cancellationToken);
+            => await service.Publish(topicArn, request.Message, cancellationToken);
 
 
 

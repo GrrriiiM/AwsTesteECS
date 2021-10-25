@@ -54,7 +54,7 @@ namespace TesteECS.Services
             await _client.SubscribeQueueToTopicsAsync(new[] { topicArn }, _sqsClient, queueArn);
         }
 
-        public async Task<string> Publish(string topicArn, dynamic message, CancellationToken cancellationToken)
+        public async Task<string> Publish(string topicArn, object message, CancellationToken cancellationToken)
         {
             return (await _client.PublishAsync(new PublishRequest
             {

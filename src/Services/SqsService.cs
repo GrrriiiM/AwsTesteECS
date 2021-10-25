@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Amazon.SQS;
@@ -60,6 +61,23 @@ namespace TesteECS.Services
             } while (!string.IsNullOrEmpty(response.NextToken));
             return queuesUrls;
         }
+
+        public async Task<string> ReceiveMessageQueue(string queueUrl, CancellationToken cancellationToken, int waitTime = 1)
+        {
+            var response = await _client.ReceiveMessageAsync(new ReceiveMessageRequest
+            {
+                QueueUrl = queueUrl,
+                MaxNumberOfMessages = 1,
+                WaitTimeSeconds = waitTime
+            }, cancellationToken);
+            if (response.Messages.Any())
+            {
+                var body = JsonSerializer.Deserialize<Dictionary<string, object>>(response.Messages.FirstOrDefault().Body);
+                await _client.DeleteMessageAsync(queueUrl, response.Messages.FirstOrDefault().ReceiptHandle);
+                return body["Message"].ToString();
+            }
+            return null;
+        }
     }
 
     [Injectable]
@@ -67,5 +85,6 @@ namespace TesteECS.Services
     {
         Task<string> CreateQueue(string name, CancellationToken cancellationToken);
         Task<IEnumerable<string>> ListQueues(CancellationToken cancellationToken);
+        Task<string> ReceiveMessageQueue(string queueUrl, CancellationToken cancellationToken, int waitTime = 1);
     }
 }
